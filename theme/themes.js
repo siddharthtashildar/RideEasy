@@ -7,6 +7,7 @@ export const lightTheme = {
   text: "#000000",
   card: "#F9F9F9",
   icoColor: "#121212",
+  
 };
 
 export const darkTheme = {

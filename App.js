@@ -1,7 +1,9 @@
 import 'react-native-gesture-handler';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
 
 import React from "react";
+import { View } from "react-native";   // ✅ use View instead
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { createDrawerNavigator } from "@react-navigation/drawer";
@@ -28,15 +30,19 @@ function MainStack() {
 
 export default function App() {
   return (
-    <ThemeProvider>
-      <NavigationContainer>
-        <Drawer.Navigator
-          drawerContent={(props) => <SideMenu {...props} />}
-          screenOptions={{ headerShown: false }}
-        >
-          <Drawer.Screen name="MainStack" component={MainStack} />
-        </Drawer.Navigator>
-      </NavigationContainer>
-    </ThemeProvider>
+
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <ThemeProvider>
+        <NavigationContainer>
+          <Drawer.Navigator
+            drawerContent={(props) => <SideMenu {...props} />}
+            screenOptions={{ headerShown: false }}
+          >
+            <Drawer.Screen name="MainStack" component={MainStack} />
+          </Drawer.Navigator>
+        </NavigationContainer>
+      </ThemeProvider>
+    </GestureHandlerRootView>
+
   );
 }
