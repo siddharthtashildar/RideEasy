@@ -6,6 +6,7 @@ export const lightTheme = {
   primary: "#FCC501",
   text: "#000000",
   card: "#F9F9F9",
+  icoColor: "#121212",
 };
 
 export const darkTheme = {
@@ -13,4 +14,5 @@ export const darkTheme = {
   primary: "#FFD600",
   text: "#FFFFFF",
   card: "#1E1E1E",
+  icoColor: "#FFD600",
 };
