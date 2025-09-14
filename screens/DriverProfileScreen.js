@@ -25,10 +25,10 @@ export default function RideOptionsScreen({ navigation }) {
     },
     {
       id: "premium",
-      name: "Premium",
+      name: "Nigga",
       time: "5 Mins",
       seats: 4,
-      price: 220,
+      price: 77777,
       img: require("../assets/Vehicles/Sedan.png"),
     },
     {
@@ -45,7 +45,7 @@ export default function RideOptionsScreen({ navigation }) {
     <View style={{ flex: 1, backgroundColor: theme.background }}>
       {/* Placeholder Map */}
       <View style={styles.mapContainer}>
-        <Text style={[styles.mapText, { color: theme.text }]}>MAP COMES HERE</Text>
+        <Text style={[styles.mapText, { color: theme.text }]}>MAP COMES HERE NIGGGGGGAAAA</Text>
       </View>
 
       {/* Bottom Sheet */}
