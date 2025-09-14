@@ -14,6 +14,7 @@ export const darkTheme = {
   background: "#121212",
   primary: "#FFD600",
   text: "#FFFFFF",
-  card: "#1E1E1E",
+  // card: "#1E1E1E",
+  card: "#282829ff",
   icoColor: "#FFD600",
 };
