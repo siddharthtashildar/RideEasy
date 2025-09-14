@@ -1,5 +1,3 @@
-
-
 import { StyleSheet } from 'react-native';
 
 
@@ -8,7 +6,7 @@ container: { flex: 1, alignItems: 'center', padding: 16, backgroundColor: '#f6f7
 title: { fontSize: 28, fontWeight: '700', marginTop: 8 },
 titleSmall: { fontSize: 16, fontWeight: '600', marginTop: 4 },
 card: { width: '100%', backgroundColor: '#fff', borderRadius: 12, padding: 12, marginTop: 8, shadowColor: '#000', shadowOpacity: 0.05, elevation: 2 },
-label: { fontSize: 12, color: '#666' },
+label: { fontSize: 12, color: '#666', fontFamily: 'Poppins-Regular' },
 input: { borderWidth: 1, borderColor: '#e3e3e3', borderRadius: 8, padding: 8, marginTop: 6 },
 btnPrimary: { marginTop: 12, backgroundColor: '#0b63ff', padding: 12, borderRadius: 8, alignItems: 'center' },
 btnText: { color: '#fff', fontWeight: '700' },

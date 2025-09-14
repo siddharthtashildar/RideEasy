@@ -74,6 +74,7 @@ export default function RideOptionsScreen({ navigation }) {
 
             {/* Drop */}
             <View style={styles.locationBlock}>
+
               <Text style={[styles.label, { color: theme.text }]}>Drop Point</Text>
               <TextInput
                 placeholder="Enter drop location"
@@ -86,7 +87,23 @@ export default function RideOptionsScreen({ navigation }) {
           </View>
 
 
+          <TouchableOpacity style={[styles.ExtrasButton, { backgroundColor: theme.background }]} >
 
+              <View style={{flexDirection:'row', alignItems:'center', justifyContent:'center'}} >
+                  <Ionicons
+                      name={"time"}
+                      size={20}
+                      color={theme.primary}
+                    />
+            <Text style={[styles.ExtrasText,{marginHorizontal:10,color: theme.text}]}>Now</Text>
+              </View>
+
+                  <Ionicons
+                      name={"chevron-forward-outline"}
+                      size={20}
+                      color={theme.icoColor}
+                    />
+          </TouchableOpacity>
 
 
 
@@ -116,6 +133,42 @@ export default function RideOptionsScreen({ navigation }) {
               ))}
             </View>
           </ScrollView>
+
+          <TouchableOpacity style={[styles.ExtrasButton, { backgroundColor: theme.background }]} >
+
+              <View style={{flexDirection:'row', alignItems:'center', justifyContent:'center'}} >
+                  <Ionicons
+                      name={"cash"}
+                      size={20}
+                      color={theme.primary}
+                    />
+            <Text style={[styles.ExtrasText,{marginHorizontal:10,color: theme.text}]}>Promocode</Text>
+              </View>
+
+                  <Ionicons
+                      name={"chevron-forward-outline"}
+                      size={20}
+                      color={theme.icoColor}
+                    />
+          </TouchableOpacity>
+
+          <TouchableOpacity style={[styles.ExtrasButton, { backgroundColor: theme.background }]} >
+
+              <View style={{flexDirection:'row', alignItems:'center', justifyContent:'center'}} >
+                  <Ionicons
+                      name={"person"}
+                      size={20}
+                      color={theme.primary}
+                    />
+            <Text style={[styles.ExtrasText,{marginHorizontal:10,color: theme.text}]}>Book for someone else</Text>
+              </View>
+
+                  <Ionicons
+                      name={"chevron-forward-outline"}
+                      size={20}
+                      color={theme.icoColor}
+                    />
+          </TouchableOpacity>
 
           {/* Confirm Button */}
           <TouchableOpacity
@@ -204,5 +257,21 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
 
+  ExtrasButton: {
+    marginTop: 5, 
+    paddingVertical: 18,
+     borderRadius: 10, 
+     alignItems: "center", 
+     marginBottom:5,
+    flexDirection:'row',
+     alignItems:'center',
+      justifyContent:'space-between',
+       paddingHorizontal:15,
+       elevation:3,
+
+    },
+    ExtrasText : {
+      fontSize: 16
+    }
 
 });

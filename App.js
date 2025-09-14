@@ -1,9 +1,13 @@
+import applyGlobalFont from './fontConfig';
+applyGlobalFont('Poppins-Regular'); // or your desired font name
+
 import 'react-native-gesture-handler';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
 
-import React from "react";
-import { View } from "react-native";   // ✅ use View instead
+import * as Font from 'expo-font';
+import React, { useEffect, useState } from "react";
+import { View, Text } from "react-native";   // ✅ use View instead
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { createDrawerNavigator } from "@react-navigation/drawer";
@@ -29,6 +33,18 @@ function MainStack() {
 }
 
 export default function App() {
+  const [fontsLoaded, setFontsLoaded] = useState(false);
+
+  useEffect(() => {
+    Font.loadAsync({
+      'Poppins-Regular': require('./assets/fonts/Poppins-Regular.ttf'),
+      'Poppins-Bold': require('./assets/fonts/Poppins-Bold.ttf'),
+      // Add other weights if needed
+    }).then(() => setFontsLoaded(true));
+  }, []);
+
+  if (!fontsLoaded) return <View><Text>Loading...</Text></View>;
+
   return (
 
     <GestureHandlerRootView style={{ flex: 1 }}>
