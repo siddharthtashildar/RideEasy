@@ -1,11 +1,20 @@
-import React, { useMemo, useRef, useState, useContext } from "react";
-import { View, Text, TouchableOpacity, StyleSheet, Image, TextInput } from "react-native";
+import React, { useMemo, useRef, useState, useContext, useEffect } from "react";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Image,
+  TextInput,
+} from "react-native";
 import BottomSheet, { BottomSheetView } from "@gorhom/bottom-sheet";
 import { Ionicons } from "@expo/vector-icons";
 import { ThemeContext } from "../context/ThemeContext";
 import { ScrollView } from "react-native-gesture-handler";
+import MapView, { Marker, Polyline } from "react-native-maps";
+import GoogleMapsService from "../services/GoogleMapsService";
 
-export default function RideOptionsScreen({ navigation }) {
+export default function RideOptionsScreen({ navigation, route }) {
   const { theme } = useContext(ThemeContext);
   const sheetRef = useRef(null);
 
@@ -14,21 +23,123 @@ export default function RideOptionsScreen({ navigation }) {
 
   // states
   const [selectedVehicle, setSelectedVehicle] = useState(null);
-  const [fromLocation, setFromLocation] = useState("");
-  const [toLocation, setToLocation] = useState("");
+  const [fromLocation, setFromLocation] = useState(
+    route?.params?.fromLocation || ""
+  );
+  const [toLocation, setToLocation] = useState(route?.params?.toLocation || "");
+  const [fromLocationDetails, setFromLocationDetails] = useState(
+    route?.params?.fromLocationDetails || null
+  );
+  const [toLocationDetails, setToLocationDetails] = useState(
+    route?.params?.toLocationDetails || null
+  );
+  const [currentLocation, setCurrentLocation] = useState(null);
+  const [routeCoordinates, setRouteCoordinates] = useState([]);
 
   const rides = [
-    { id: "standard", name: "Standard", time: "7 Mins", seats: 4, price: 120, img: require("../assets/Vehicles/Standard.png") },
-    { id: "premium", name: "Premium", time: "5 Mins", seats: 4, price: 220, img: require("../assets/Vehicles/Sedan.png") },
-    { id: "suv", name: "SUV", time: "10 Mins", seats: 6, price: 320, img: require("../assets/Vehicles/SUV.png") },
+    {
+      id: "standard",
+      name: "Standard",
+      time: "7 Mins",
+      seats: 4,
+      price: 120,
+      img: require("../assets/Vehicles/Standard.png"),
+    },
+    {
+      id: "premium",
+      name: "Premium",
+      time: "5 Mins",
+      seats: 4,
+      price: 220,
+      img: require("../assets/Vehicles/Sedan.png"),
+    },
+    {
+      id: "suv",
+      name: "SUV",
+      time: "10 Mins",
+      seats: 6,
+      price: 320,
+      img: require("../assets/Vehicles/SUV.png"),
+    },
   ];
+
+  useEffect(() => {
+    GoogleMapsService.getCurrentLocation().then(setCurrentLocation);
+  }, []);
+
+  useEffect(() => {
+    if (fromLocationDetails && toLocationDetails) {
+      const coordinates = [
+        {
+          latitude: fromLocationDetails.location.latitude,
+          longitude: fromLocationDetails.location.longitude,
+        },
+        {
+          latitude: toLocationDetails.location.latitude,
+          longitude: toLocationDetails.location.longitude,
+        },
+      ];
+      setRouteCoordinates(coordinates);
+    }
+  }, [fromLocationDetails, toLocationDetails]);
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.background }}>
-      {/* Placeholder Map */}
-      <View style={styles.mapContainer}>
-        <Text style={[styles.mapText, { color: theme.text }]}>MAP COMES HERE</Text>
-      </View>
+      {/* Map */}
+      <MapView
+        style={styles.mapContainer}
+        initialRegion={
+          currentLocation
+            ? {
+                latitude: currentLocation.latitude,
+                longitude: currentLocation.longitude,
+                latitudeDelta: 0.01,
+                longitudeDelta: 0.01,
+              }
+            : {
+                latitude: 28.6139,
+                longitude: 77.209,
+                latitudeDelta: 0.01,
+                longitudeDelta: 0.01,
+              }
+        }
+        showsUserLocation={true}
+        showsMyLocationButton={true}
+        mapType="standard"
+      >
+        {fromLocationDetails && (
+          <Marker
+            coordinate={{
+              latitude: fromLocationDetails.location.latitude,
+              longitude: fromLocationDetails.location.longitude,
+            }}
+            title="Pickup Location"
+            description={fromLocationDetails.name}
+            pinColor="green"
+          />
+        )}
+
+        {toLocationDetails && (
+          <Marker
+            coordinate={{
+              latitude: toLocationDetails.location.latitude,
+              longitude: toLocationDetails.location.longitude,
+            }}
+            title="Drop Location"
+            description={toLocationDetails.name}
+            pinColor="red"
+          />
+        )}
+
+        {routeCoordinates.length > 0 && (
+          <Polyline
+            coordinates={routeCoordinates}
+            strokeColor="#007AFF"
+            strokeWidth={3}
+            lineDashPattern={[5, 5]}
+          />
+        )}
+      </MapView>
 
       {/* Bottom Sheet */}
       <BottomSheet
@@ -39,15 +150,23 @@ export default function RideOptionsScreen({ navigation }) {
         handleIndicatorStyle={{ backgroundColor: theme.text }}
         style={{ marginHorizontal: 5, borderRadius: 20, overflow: "hidden" }}
       >
-        <BottomSheetView style={[styles.sheetContent, { backgroundColor: theme.card }]}>
+        <BottomSheetView
+          style={[styles.sheetContent, { backgroundColor: theme.card }]}
+        >
           {/* Inputs */}
 
-          <Text style={[styles.title, { color: theme.text }]}>Select Your Ride</Text>
+          <Text style={[styles.title, { color: theme.text }]}>
+            Select Your Ride
+          </Text>
 
-          <View style={[styles.locationCard, { backgroundColor: theme.background }]}>
+          <View
+            style={[styles.locationCard, { backgroundColor: theme.background }]}
+          >
             {/* Pickup */}
             <View style={styles.locationBlock}>
-              <Text style={[styles.label, { color: theme.text }]}>Pickup Point</Text>
+              <Text style={[styles.label, { color: theme.text }]}>
+                Pickup Point
+              </Text>
               <TextInput
                 placeholder="Enter pickup location"
                 placeholderTextColor="#999"
@@ -64,8 +183,11 @@ export default function RideOptionsScreen({ navigation }) {
                 style={[styles.swapButton, { backgroundColor: theme.primary }]}
                 onPress={() => {
                   const temp = fromLocation;
+                  const tempDetails = fromLocationDetails;
                   setFromLocation(toLocation);
                   setToLocation(temp);
+                  setFromLocationDetails(toLocationDetails);
+                  setToLocationDetails(tempDetails);
                 }}
               >
                 <Ionicons name="swap-vertical" size={18} color="#000" />
@@ -74,8 +196,9 @@ export default function RideOptionsScreen({ navigation }) {
 
             {/* Drop */}
             <View style={styles.locationBlock}>
-
-              <Text style={[styles.label, { color: theme.text }]}>Drop Point</Text>
+              <Text style={[styles.label, { color: theme.text }]}>
+                Drop Point
+              </Text>
               <TextInput
                 placeholder="Enter drop location"
                 placeholderTextColor="#999"
@@ -86,27 +209,33 @@ export default function RideOptionsScreen({ navigation }) {
             </View>
           </View>
 
+          <TouchableOpacity
+            style={[styles.ExtrasButton, { backgroundColor: theme.background }]}
+          >
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Ionicons name={"time"} size={20} color={theme.primary} />
+              <Text
+                style={[
+                  styles.ExtrasText,
+                  { marginHorizontal: 10, color: theme.text },
+                ]}
+              >
+                Now
+              </Text>
+            </View>
 
-          <TouchableOpacity style={[styles.ExtrasButton, { backgroundColor: theme.background }]} >
-
-              <View style={{flexDirection:'row', alignItems:'center', justifyContent:'center'}} >
-                  <Ionicons
-                      name={"time"}
-                      size={20}
-                      color={theme.primary}
-                    />
-            <Text style={[styles.ExtrasText,{marginHorizontal:10,color: theme.text}]}>Now</Text>
-              </View>
-
-                  <Ionicons
-                      name={"chevron-forward-outline"}
-                      size={20}
-                      color={theme.icoColor}
-                    />
+            <Ionicons
+              name={"chevron-forward-outline"}
+              size={20}
+              color={theme.icoColor}
+            />
           </TouchableOpacity>
-
-
-
 
           {/* Vehicle Cards */}
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
@@ -116,58 +245,99 @@ export default function RideOptionsScreen({ navigation }) {
                   key={ride.id}
                   style={[
                     styles.card,
-                    { backgroundColor: theme.background, borderColor: theme.background },
-                    selectedVehicle === ride.id && { borderColor: theme.primary, borderWidth: 2 },
+                    {
+                      backgroundColor: theme.background,
+                      borderColor: theme.background,
+                    },
+                    selectedVehicle === ride.id && {
+                      borderColor: theme.primary,
+                      borderWidth: 2,
+                    },
                   ]}
                   onPress={() => setSelectedVehicle(ride.id)}
                 >
                   <View style={styles.vehicalTimeRow}>
-                    <Text style={[styles.rideTimeText, { color: theme.text, marginRight: 55 }]}>{ride.time}</Text>
-                    <Ionicons name="person-outline" size={14} color={theme.icoColor} />
-                    <Text style={[styles.rideTimeText, { color: theme.text }]}>{ride.seats}</Text>
+                    <Text
+                      style={[
+                        styles.rideTimeText,
+                        { color: theme.text, marginRight: 55 },
+                      ]}
+                    >
+                      {ride.time}
+                    </Text>
+                    <Ionicons
+                      name="person-outline"
+                      size={14}
+                      color={theme.icoColor}
+                    />
+                    <Text style={[styles.rideTimeText, { color: theme.text }]}>
+                      {ride.seats}
+                    </Text>
                   </View>
                   <Image source={ride.img} style={styles.carIcon} />
-                  <Text style={[styles.rideName, { color: theme.text }]}>{ride.name}</Text>
+                  <Text style={[styles.rideName, { color: theme.text }]}>
+                    {ride.name}
+                  </Text>
                   <Text style={{ color: theme.text }}>₹{ride.price}</Text>
                 </TouchableOpacity>
               ))}
             </View>
           </ScrollView>
 
-          <TouchableOpacity style={[styles.ExtrasButton, { backgroundColor: theme.background }]} >
+          <TouchableOpacity
+            style={[styles.ExtrasButton, { backgroundColor: theme.background }]}
+          >
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Ionicons name={"cash"} size={20} color={theme.primary} />
+              <Text
+                style={[
+                  styles.ExtrasText,
+                  { marginHorizontal: 10, color: theme.text },
+                ]}
+              >
+                Promocode
+              </Text>
+            </View>
 
-              <View style={{flexDirection:'row', alignItems:'center', justifyContent:'center'}} >
-                  <Ionicons
-                      name={"cash"}
-                      size={20}
-                      color={theme.primary}
-                    />
-            <Text style={[styles.ExtrasText,{marginHorizontal:10,color: theme.text}]}>Promocode</Text>
-              </View>
-
-                  <Ionicons
-                      name={"chevron-forward-outline"}
-                      size={20}
-                      color={theme.icoColor}
-                    />
+            <Ionicons
+              name={"chevron-forward-outline"}
+              size={20}
+              color={theme.icoColor}
+            />
           </TouchableOpacity>
 
-          <TouchableOpacity style={[styles.ExtrasButton, { backgroundColor: theme.background }]} >
+          <TouchableOpacity
+            style={[styles.ExtrasButton, { backgroundColor: theme.background }]}
+          >
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Ionicons name={"person"} size={20} color={theme.primary} />
+              <Text
+                style={[
+                  styles.ExtrasText,
+                  { marginHorizontal: 10, color: theme.text },
+                ]}
+              >
+                Book for someone else
+              </Text>
+            </View>
 
-              <View style={{flexDirection:'row', alignItems:'center', justifyContent:'center'}} >
-                  <Ionicons
-                      name={"person"}
-                      size={20}
-                      color={theme.primary}
-                    />
-            <Text style={[styles.ExtrasText,{marginHorizontal:10,color: theme.text}]}>Book for someone else</Text>
-              </View>
-
-                  <Ionicons
-                      name={"chevron-forward-outline"}
-                      size={20}
-                      color={theme.icoColor}
-                    />
+            <Ionicons
+              name={"chevron-forward-outline"}
+              size={20}
+              color={theme.icoColor}
+            />
           </TouchableOpacity>
 
           {/* Confirm Button */}
@@ -175,7 +345,11 @@ export default function RideOptionsScreen({ navigation }) {
             style={[styles.bookButton, { backgroundColor: theme.primary }]}
             onPress={() => {
               if (selectedVehicle && fromLocation && toLocation) {
-                navigation.navigate("Confirm", { ride: selectedVehicle, from: fromLocation, to: toLocation });
+                navigation.navigate("Confirm", {
+                  ride: selectedVehicle,
+                  from: fromLocation,
+                  to: toLocation,
+                });
               } else {
                 alert("Please fill in locations and select a ride");
               }
@@ -190,14 +364,21 @@ export default function RideOptionsScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  mapContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
-  mapText: { fontSize: 18, fontWeight: "bold" },
+  mapContainer: { flex: 1 },
 
   sheetContent: { flex: 1, padding: 15 },
 
-
-  title: { fontSize: 18, fontWeight: "bold", marginBottom: 15, textAlign: "center" },
-  vehicleRow: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 10 },
+  title: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 15,
+    textAlign: "center",
+  },
+  vehicleRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingVertical: 10,
+  },
   card: {
     width: 150,
     padding: 10,
@@ -207,11 +388,21 @@ const styles = StyleSheet.create({
     marginHorizontal: 5,
     elevation: 3,
   },
-  vehicalTimeRow: { flexDirection: "row", alignItems: "center", marginBottom: 15 },
+  vehicalTimeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 15,
+  },
   carIcon: { width: 70, height: 70, resizeMode: "contain", marginBottom: 5 },
   rideName: { fontSize: 16, fontWeight: "600" },
   rideTimeText: { fontSize: 12, fontWeight: "bold" },
-  bookButton: { marginTop: 20, paddingVertical: 12, borderRadius: 10, alignItems: "center", marginBottom: 35 },
+  bookButton: {
+    marginTop: 20,
+    paddingVertical: 12,
+    borderRadius: 10,
+    alignItems: "center",
+    marginBottom: 35,
+  },
   bookText: { color: "#000", fontSize: 16, fontWeight: "bold" },
 
   locationCard: {
@@ -258,20 +449,18 @@ const styles = StyleSheet.create({
   },
 
   ExtrasButton: {
-    marginTop: 5, 
+    marginTop: 5,
     paddingVertical: 18,
-     borderRadius: 10, 
-     alignItems: "center", 
-     marginBottom:5,
-    flexDirection:'row',
-     alignItems:'center',
-      justifyContent:'space-between',
-       paddingHorizontal:15,
-       elevation:3,
-
-    },
-    ExtrasText : {
-      fontSize: 16
-    }
-
+    borderRadius: 10,
+    alignItems: "center",
+    marginBottom: 5,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 15,
+    elevation: 3,
+  },
+  ExtrasText: {
+    fontSize: 16,
+  },
 });
