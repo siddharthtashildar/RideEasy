@@ -1,64 +1,99 @@
 import React, { useMemo, useRef, useState, useContext } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  TextInput,
+  ScrollView,
+} from "react-native";
 import { ThemeContext } from "../context/ThemeContext";
 import { Ionicons } from "@expo/vector-icons";
+import LocationSearchInput from "../components/LocationSearchInput";
 
 export default function HomeScreen({ navigation }) {
   const { theme } = useContext(ThemeContext);
   const [fromLocation, setFromLocation] = useState("");
   const [toLocation, setToLocation] = useState("");
+  const [fromLocationDetails, setFromLocationDetails] = useState(null);
+  const [toLocationDetails, setToLocationDetails] = useState(null);
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: theme.background }]}>
-
+    <ScrollView
+      style={[styles.container, { backgroundColor: theme.background }]}
+    >
       <View style={styles.header}>
-
-        <Ionicons name="menu" size={28} color={theme.text} onPress={() => navigation.openDrawer()} />
+        <Ionicons
+          name="menu"
+          size={28}
+          color={theme.text}
+          onPress={() => navigation.openDrawer()}
+        />
         <Text style={[styles.logo, { color: theme.text }]}>RideEasy</Text>
         <Ionicons name="notifications" size={24} color={theme.text} />
       </View>
 
-      <Text style={[styles.nameTitle, { color: theme.text, fontFamily: 'Poppins-Bold'}]}>Hi Niggachu!</Text>
-      <Text style={[styles.nameTitleSmol, { color: theme.text }]}>Where would you like to go?</Text>
+      <Text
+        style={[
+          styles.nameTitle,
+          { color: theme.text, fontFamily: "Poppins-Bold" },
+        ]}
+      >
+        Hi Niggachu!
+      </Text>
+      <Text style={[styles.nameTitleSmol, { color: theme.text }]}>
+        Where would you like to go?
+      </Text>
 
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} >
-      <View style={styles.savedRow}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+        <View style={styles.savedRow}>
+          <TouchableOpacity
+            style={[styles.savedButton, { backgroundColor: theme.primary }]}
+          >
+            <Text style={[styles.savedTitle, { color: "#000" }]}>+ Add</Text>
+          </TouchableOpacity>
 
-          <TouchableOpacity style={[styles.savedButton, { backgroundColor: theme.primary }]}>
-        <Text style={[styles.savedTitle , { color: "#000" }]}>+ Add</Text>
-      </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.savedButton, { backgroundColor: theme.card }]}
+          >
+            <Text style={[styles.savedTitle, { color: theme.text }]}>Home</Text>
+          </TouchableOpacity>
 
-      <TouchableOpacity style={[styles.savedButton, { backgroundColor: theme.card }]}>
-        <Text style={[styles.savedTitle , { color: theme.text }]}>Home</Text>
-      </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.savedButton, { backgroundColor: theme.card }]}
+          >
+            <Text style={[styles.savedTitle, { color: theme.text }]}>
+              Office
+            </Text>
+          </TouchableOpacity>
 
-            <TouchableOpacity style={[styles.savedButton, { backgroundColor: theme.card }]}>
-        <Text style={[styles.savedTitle , { color: theme.text }]}>Office</Text>
-      </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.savedButton, { backgroundColor: theme.card }]}
+          >
+            <Text style={[styles.savedTitle, { color: theme.text }]}>Gym</Text>
+          </TouchableOpacity>
 
-      <TouchableOpacity style={[styles.savedButton, { backgroundColor: theme.card }]}>
-        <Text style={[styles.savedTitle , { color: theme.text }]}>Gym</Text>
-      </TouchableOpacity>
-
-            <TouchableOpacity style={[styles.savedButton, { backgroundColor: theme.card }]}>
-        <Text style={[styles.savedTitle , { color: theme.text }]}>Coffee</Text>
-      </TouchableOpacity>
-
-      </View>
-
+          <TouchableOpacity
+            style={[styles.savedButton, { backgroundColor: theme.card }]}
+          >
+            <Text style={[styles.savedTitle, { color: theme.text }]}>
+              Coffee
+            </Text>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
-
 
       <View style={[styles.locationCard, { backgroundColor: theme.card }]}>
         {/* Pickup */}
         <View style={styles.locationBlock}>
-          <Text style={[styles.label, { color: theme.text }]}>Pickup Point</Text>
-          <TextInput
+          <LocationSearchInput
+            label="Pickup Point"
             placeholder="Enter pickup location"
-            placeholderTextColor="#999"
-            style={[styles.locationInput, { color: theme.text }]}
             value={fromLocation}
             onChangeText={setFromLocation}
+            onLocationSelect={setFromLocationDetails}
+            theme={theme}
+            showCurrentLocation={true}
           />
         </View>
 
@@ -69,8 +104,11 @@ export default function HomeScreen({ navigation }) {
             style={[styles.swapButton, { backgroundColor: theme.primary }]}
             onPress={() => {
               const temp = fromLocation;
+              const tempDetails = fromLocationDetails;
               setFromLocation(toLocation);
               setToLocation(temp);
+              setFromLocationDetails(toLocationDetails);
+              setToLocationDetails(tempDetails);
             }}
           >
             <Ionicons name="swap-vertical" size={18} color="#000" />
@@ -79,61 +117,113 @@ export default function HomeScreen({ navigation }) {
 
         {/* Drop */}
         <View style={styles.locationBlock}>
-
-          <Text style={[styles.label, { color: theme.text }]}>Drop Point</Text>
-          <TextInput
+          <LocationSearchInput
+            label="Drop Point"
             placeholder="Enter drop location"
-            placeholderTextColor="#999"
-            style={[styles.locationInput, { color: theme.text }]}
             value={toLocation}
             onChangeText={setToLocation}
+            onLocationSelect={setToLocationDetails}
+            theme={theme}
+            showCurrentLocation={false}
           />
         </View>
-
       </View>
       <TouchableOpacity
         style={[styles.button, { backgroundColor: theme.primary }]}
-        onPress={() => navigation.navigate("RideOptions")}
+        onPress={() =>
+          navigation.navigate("RideOptions", {
+            fromLocation,
+            toLocation,
+            fromLocationDetails,
+            toLocationDetails,
+          })
+        }
       >
         <Text style={styles.buttonText}>FIND YOUR RIDE!</Text>
       </TouchableOpacity>
 
       <Text style={[styles.sectionTitle, { color: theme.text }]}>Services</Text>
 
-
-
-      <Text style={[styles.sectionTitle, { color: theme.text }]}>Recent Visits</Text>
-      <Text style={[styles.recentText, { color: theme.text }]}>Utah University, Charlie Kirk Last Spot</Text>
-      <Text style={[styles.recentText, { color: theme.text }]}>Geeta residency, Urvasad</Text>
-
+      <Text style={[styles.sectionTitle, { color: theme.text }]}>
+        Recent Visits
+      </Text>
+      <Text style={[styles.recentText, { color: theme.text }]}>
+        Utah University, Charlie Kirk Last Spot
+      </Text>
+      <Text style={[styles.recentText, { color: theme.text }]}>
+        Geeta residency, Urvasad
+      </Text>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 20 },
-  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 5, marginTop: 30 },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 5,
+    marginTop: 30,
+  },
   logo: { fontSize: 20, fontWeight: "bold" },
 
-  
   buttonText: { color: "#000", fontWeight: "bold", fontSize: 16 },
-  sectionTitle: { fontSize: 18, fontWeight: "bold", marginTop: 60, marginBottom: 15 },
-  savedRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: 25,paddingHorizontal:5,marginHorizontal:-5,marginTop:0, },
-  savedCard: { flex: 0.48, width: 150,marginHorizontal:10, padding: 15, borderRadius: 12, elevation: 3, },
-  savedTitle: { fontSize: 16},
-  recentText: { marginTop: 20, borderBottomColor: "#666", color: "#666", borderBottomWidth: 1, paddingBottom: 20 },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginTop: 60,
+    marginBottom: 15,
+  },
+  savedRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 25,
+    paddingHorizontal: 5,
+    marginHorizontal: -5,
+    marginTop: 0,
+  },
+  savedCard: {
+    flex: 0.48,
+    width: 150,
+    marginHorizontal: 10,
+    padding: 15,
+    borderRadius: 12,
+    elevation: 3,
+  },
+  savedTitle: { fontSize: 16 },
+  recentText: {
+    marginTop: 20,
+    borderBottomColor: "#666",
+    color: "#666",
+    borderBottomWidth: 1,
+    paddingBottom: 20,
+  },
   nameTitle: { fontSize: 32, fontWeight: "bold", marginTop: 20 },
-  nameTitleSmol: { fontSize: 16, marginTop: 5, marginBottom: 20, color: "#666" },
-  savedButton: {borderRadius:16, alignItems: "center", width:70, paddingVertical:6, elevation:3, marginHorizontal:6, marginTop:10, },
+  nameTitleSmol: {
+    fontSize: 16,
+    marginTop: 5,
+    marginBottom: 20,
+    color: "#666",
+  },
+  savedButton: {
+    borderRadius: 16,
+    alignItems: "center",
+    width: 70,
+    paddingVertical: 6,
+    elevation: 3,
+    marginHorizontal: 6,
+    marginTop: 10,
+  },
 
-  button: { 
-    paddingVertical: 12, 
-    borderBottomLeftRadius: 16, 
-    borderBottomRightRadius: 16, 
-    alignItems: "center", 
-    paddingHorizontal: 15, 
-    elevation: 3, 
-    marginHorizontal:-.25,
+  button: {
+    paddingVertical: 12,
+    borderBottomLeftRadius: 16,
+    borderBottomRightRadius: 16,
+    alignItems: "center",
+    paddingHorizontal: 15,
+    elevation: 3,
+    marginHorizontal: -0.25,
   },
 
   locationCard: {
