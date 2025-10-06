@@ -6,20 +6,26 @@ import {
   StyleSheet,
   Image,
   TextInput,
+  FlatList,
 } from "react-native";
-import BottomSheet, { BottomSheetView } from "@gorhom/bottom-sheet";
+import BottomSheet, {
+  BottomSheetView,
+  BottomSheetFlatList,
+  BottomSheetScrollView,
+} from "@gorhom/bottom-sheet";
 import { Ionicons } from "@expo/vector-icons";
 import { ThemeContext } from "../context/ThemeContext";
-import { ScrollView } from "react-native-gesture-handler";
 import MapView, { Marker, Polyline } from "react-native-maps";
 import GoogleMapsService from "../services/GoogleMapsService";
+import LocationSearchInput from "../components/LocationSearchInput";
+import ENVIRONMENT from "../config/environment";
 
 export default function RideOptionsScreen({ navigation, route }) {
   const { theme } = useContext(ThemeContext);
   const sheetRef = useRef(null);
 
   // bottom sheet snap points
-  const snapPoints = useMemo(() => ["45%", "85%"], []);
+  const snapPoints = useMemo(() => ["20%", "60%"], []);
 
   // states
   const [selectedVehicle, setSelectedVehicle] = useState(null);
@@ -35,6 +41,9 @@ export default function RideOptionsScreen({ navigation, route }) {
   );
   const [currentLocation, setCurrentLocation] = useState(null);
   const [routeCoordinates, setRouteCoordinates] = useState([]);
+  const [routeInfo, setRouteInfo] = useState(null);
+  const [routeSteps, setRouteSteps] = useState([]);
+  const mapRef = useRef(null);
 
   const rides = [
     {
@@ -80,66 +89,190 @@ export default function RideOptionsScreen({ navigation, route }) {
         },
       ];
       setRouteCoordinates(coordinates);
+
+      // Get detailed route directions
+      getRouteDirections(
+        fromLocationDetails.location,
+        toLocationDetails.location
+      );
+
+      // Fit map to show both locations
+      fitMapToCoordinates([
+        fromLocationDetails.location,
+        toLocationDetails.location,
+      ]);
     }
   }, [fromLocationDetails, toLocationDetails]);
 
+  const fitMapToCoordinates = (coordinates) => {
+    if (mapRef.current && coordinates.length > 0) {
+      mapRef.current.fitToCoordinates(coordinates, {
+        edgePadding: { top: 50, right: 50, bottom: 50, left: 50 },
+        animated: true,
+      });
+    }
+  };
+
+  const getRouteDirections = async (origin, destination) => {
+    try {
+      const response = await fetch(
+        `https://maps.googleapis.com/maps/api/directions/json?origin=${origin.latitude},${origin.longitude}&destination=${destination.latitude},${destination.longitude}&key=${ENVIRONMENT.GOOGLE_PLACES_API_KEY}&mode=driving&alternatives=false&avoid=tolls&units=metric`
+      );
+      const data = await response.json();
+
+      if (data.routes && data.routes.length > 0) {
+        const route = data.routes[0];
+        const points = route.overview_polyline.points;
+        const decodedPoints = decodePolyline(points);
+        setRouteCoordinates(decodedPoints);
+
+        // Store route information
+        setRouteInfo({
+          distance: route.legs[0]?.distance?.text,
+          duration: route.legs[0]?.duration?.text,
+          steps: route.legs[0]?.steps?.length || 0,
+        });
+
+        // Store route steps for detailed directions
+        if (route.legs[0]?.steps) {
+          const steps = route.legs[0].steps.map((step, index) => ({
+            id: index,
+            instruction: step.html_instructions.replace(/<[^>]*>/g, ""), // Remove HTML tags
+            distance: step.distance?.text,
+            duration: step.duration?.text,
+            maneuver: step.maneuver,
+          }));
+          setRouteSteps(steps);
+        }
+
+        // Log route information for debugging
+        console.log("Route found:", {
+          distance: route.legs[0]?.distance?.text,
+          duration: route.legs[0]?.duration?.text,
+          steps: route.legs[0]?.steps?.length || 0,
+        });
+      }
+    } catch (error) {
+      console.error("Error getting route directions:", error);
+    }
+  };
+
+  const decodePolyline = (encoded) => {
+    const poly = [];
+    let index = 0;
+    const len = encoded.length;
+    let lat = 0;
+    let lng = 0;
+
+    while (index < len) {
+      let b;
+      let shift = 0;
+      let result = 0;
+      do {
+        b = encoded.charCodeAt(index++) - 63;
+        result |= (b & 0x1f) << shift;
+        shift += 5;
+      } while (b >= 0x20);
+      const dlat = (result & 1) !== 0 ? ~(result >> 1) : result >> 1;
+      lat += dlat;
+
+      shift = 0;
+      result = 0;
+      do {
+        b = encoded.charCodeAt(index++) - 63;
+        result |= (b & 0x1f) << shift;
+        shift += 5;
+      } while (b >= 0x20);
+      const dlng = (result & 1) !== 0 ? ~(result >> 1) : result >> 1;
+      lng += dlng;
+
+      poly.push({
+        latitude: lat / 1e5,
+        longitude: lng / 1e5,
+      });
+    }
+    return poly;
+  };
+
   return (
     <View style={{ flex: 1, backgroundColor: theme.background }}>
-      {/* Map */}
-      <MapView
-        style={styles.mapContainer}
-        initialRegion={
-          currentLocation
-            ? {
-                latitude: currentLocation.latitude,
-                longitude: currentLocation.longitude,
-                latitudeDelta: 0.01,
-                longitudeDelta: 0.01,
-              }
-            : {
-                latitude: 28.6139,
-                longitude: 77.209,
-                latitudeDelta: 0.01,
-                longitudeDelta: 0.01,
-              }
-        }
-        showsUserLocation={true}
-        showsMyLocationButton={true}
-        mapType="standard"
-      >
-        {fromLocationDetails && (
-          <Marker
-            coordinate={{
-              latitude: fromLocationDetails.location.latitude,
-              longitude: fromLocationDetails.location.longitude,
-            }}
-            title="Pickup Location"
-            description={fromLocationDetails.name}
-            pinColor="green"
-          />
-        )}
+      <View style={{ height: "80%" }}>
+        <MapView
+          ref={mapRef}
+          style={styles.mapContainer}
+          initialRegion={
+            currentLocation
+              ? {
+                  latitude: currentLocation.latitude,
+                  longitude: currentLocation.longitude,
+                  latitudeDelta: 0.01,
+                  longitudeDelta: 0.01,
+                }
+              : {
+                  latitude: 28.6139,
+                  longitude: 77.209,
+                  latitudeDelta: 0.01,
+                  longitudeDelta: 0.01,
+                }
+          }
+          showsUserLocation={true}
+          showsMyLocationButton={true}
+          mapType="standard"
+        >
+          {fromLocationDetails && (
+            <Marker
+              coordinate={{
+                latitude: fromLocationDetails.location.latitude,
+                longitude: fromLocationDetails.location.longitude,
+              }}
+              title="Pickup Location"
+              description={fromLocationDetails.name}
+              pinColor="green"
+            >
+              <View style={styles.markerContainer}>
+                <Ionicons name="location" size={24} color="#4CAF50" />
+              </View>
+            </Marker>
+          )}
 
-        {toLocationDetails && (
-          <Marker
-            coordinate={{
-              latitude: toLocationDetails.location.latitude,
-              longitude: toLocationDetails.location.longitude,
-            }}
-            title="Drop Location"
-            description={toLocationDetails.name}
-            pinColor="red"
-          />
-        )}
+          {toLocationDetails && (
+            <Marker
+              coordinate={{
+                latitude: toLocationDetails.location.latitude,
+                longitude: toLocationDetails.location.longitude,
+              }}
+              title="Drop Location"
+              description={toLocationDetails.name}
+              pinColor="red"
+            >
+              <View style={styles.markerContainer}>
+                <Ionicons name="flag" size={24} color="#F44336" />
+              </View>
+            </Marker>
+          )}
 
-        {routeCoordinates.length > 0 && (
-          <Polyline
-            coordinates={routeCoordinates}
-            strokeColor="#007AFF"
-            strokeWidth={3}
-            lineDashPattern={[5, 5]}
-          />
-        )}
-      </MapView>
+          {routeCoordinates.length > 0 && (
+            <>
+              {/* Main route line */}
+              <Polyline
+                coordinates={routeCoordinates}
+                strokeColor="#007AFF"
+                strokeWidth={6}
+                lineCap="round"
+                lineJoin="round"
+              />
+              {/* Secondary route line for depth */}
+              <Polyline
+                coordinates={routeCoordinates}
+                strokeColor="#FFFFFF"
+                strokeWidth={4}
+                lineCap="round"
+                lineJoin="round"
+              />
+            </>
+          )}
+        </MapView>
+      </View>
 
       {/* Bottom Sheet */}
       <BottomSheet
@@ -150,29 +283,38 @@ export default function RideOptionsScreen({ navigation, route }) {
         handleIndicatorStyle={{ backgroundColor: theme.text }}
         style={{ marginHorizontal: 5, borderRadius: 20, overflow: "hidden" }}
       >
-        <BottomSheetView
+        <BottomSheetScrollView
           style={[styles.sheetContent, { backgroundColor: theme.card }]}
+          contentContainerStyle={{ paddingBottom: 20 }}
         >
           {/* Inputs */}
 
-          <Text style={[styles.title, { color: theme.text }]}>
-            Select Your Ride
-          </Text>
+          <View style={styles.headerRow}>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => navigation.goBack()}
+            >
+              <Ionicons name="arrow-back" size={24} color={theme.text} />
+            </TouchableOpacity>
+            <Text style={[styles.title, { color: theme.text }]}>
+              Select Your Ride
+            </Text>
+            <View style={styles.placeholder} />
+          </View>
 
           <View
             style={[styles.locationCard, { backgroundColor: theme.background }]}
           >
             {/* Pickup */}
             <View style={styles.locationBlock}>
-              <Text style={[styles.label, { color: theme.text }]}>
-                Pickup Point
-              </Text>
-              <TextInput
+              <LocationSearchInput
+                label="Pickup Point"
                 placeholder="Enter pickup location"
-                placeholderTextColor="#999"
-                style={[styles.locationInput, { color: theme.text }]}
                 value={fromLocation}
                 onChangeText={setFromLocation}
+                onLocationSelect={setFromLocationDetails}
+                theme={theme}
+                showCurrentLocation={true}
               />
             </View>
 
@@ -196,18 +338,88 @@ export default function RideOptionsScreen({ navigation, route }) {
 
             {/* Drop */}
             <View style={styles.locationBlock}>
-              <Text style={[styles.label, { color: theme.text }]}>
-                Drop Point
-              </Text>
-              <TextInput
+              <LocationSearchInput
+                label="Drop Point"
                 placeholder="Enter drop location"
-                placeholderTextColor="#999"
-                style={[styles.locationInput, { color: theme.text }]}
                 value={toLocation}
                 onChangeText={setToLocation}
+                onLocationSelect={setToLocationDetails}
+                theme={theme}
+                showCurrentLocation={false}
               />
             </View>
           </View>
+
+          {/* Route Information */}
+          {routeInfo && (
+            <View
+              style={[
+                styles.routeInfoCard,
+                { backgroundColor: theme.background },
+              ]}
+            >
+              <View style={styles.routeInfoRow}>
+                <Ionicons name="navigate" size={20} color={theme.primary} />
+                <Text style={[styles.routeInfoText, { color: theme.text }]}>
+                  {routeInfo.distance} • {routeInfo.duration}
+                </Text>
+              </View>
+              <View style={styles.routeInfoRow}>
+                <Ionicons name="map" size={20} color={theme.primary} />
+                <Text style={[styles.routeInfoText, { color: theme.text }]}>
+                  {routeInfo.steps} steps
+                </Text>
+              </View>
+            </View>
+          )}
+
+          {/* Route Steps */}
+          {routeSteps.length > 0 && (
+            <View
+              style={[
+                styles.routeStepsCard,
+                { backgroundColor: theme.background },
+              ]}
+            >
+              <Text style={[styles.routeStepsTitle, { color: theme.text }]}>
+                Route Directions
+              </Text>
+              <BottomSheetFlatList
+                data={routeSteps.slice(0, 5)} // Show first 5 steps
+                keyExtractor={(item) => item.id.toString()}
+                renderItem={({ item, index }) => (
+                  <View style={styles.routeStepItem}>
+                    <View
+                      style={[
+                        styles.stepNumber,
+                        { backgroundColor: theme.primary },
+                      ]}
+                    >
+                      <Text style={styles.stepNumberText}>{index + 1}</Text>
+                    </View>
+                    <View style={styles.stepContent}>
+                      <Text
+                        style={[styles.stepInstruction, { color: theme.text }]}
+                      >
+                        {item.instruction}
+                      </Text>
+                      {item.distance && (
+                        <Text
+                          style={[
+                            styles.stepDistance,
+                            { color: theme.textSecondary },
+                          ]}
+                        >
+                          {item.distance}
+                        </Text>
+                      )}
+                    </View>
+                  </View>
+                )}
+                showsVerticalScrollIndicator={false}
+              />
+            </View>
+          )}
 
           <TouchableOpacity
             style={[styles.ExtrasButton, { backgroundColor: theme.background }]}
@@ -238,51 +450,53 @@ export default function RideOptionsScreen({ navigation, route }) {
           </TouchableOpacity>
 
           {/* Vehicle Cards */}
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <View style={styles.vehicleRow}>
-              {rides.map((ride) => (
-                <TouchableOpacity
-                  key={ride.id}
-                  style={[
-                    styles.card,
-                    {
-                      backgroundColor: theme.background,
-                      borderColor: theme.background,
-                    },
-                    selectedVehicle === ride.id && {
-                      borderColor: theme.primary,
-                      borderWidth: 2,
-                    },
-                  ]}
-                  onPress={() => setSelectedVehicle(ride.id)}
-                >
-                  <View style={styles.vehicalTimeRow}>
-                    <Text
-                      style={[
-                        styles.rideTimeText,
-                        { color: theme.text, marginRight: 55 },
-                      ]}
-                    >
-                      {ride.time}
-                    </Text>
-                    <Ionicons
-                      name="person-outline"
-                      size={14}
-                      color={theme.icoColor}
-                    />
-                    <Text style={[styles.rideTimeText, { color: theme.text }]}>
-                      {ride.seats}
-                    </Text>
-                  </View>
-                  <Image source={ride.img} style={styles.carIcon} />
-                  <Text style={[styles.rideName, { color: theme.text }]}>
-                    {ride.name}
+          <BottomSheetFlatList
+            data={rides}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                style={[
+                  styles.card,
+                  {
+                    backgroundColor: theme.background,
+                    borderColor: theme.background,
+                  },
+                  selectedVehicle === item.id && {
+                    borderColor: theme.primary,
+                    borderWidth: 2,
+                  },
+                ]}
+                onPress={() => setSelectedVehicle(item.id)}
+              >
+                <View style={styles.vehicalTimeRow}>
+                  <Text
+                    style={[
+                      styles.rideTimeText,
+                      { color: theme.text, marginRight: 55 },
+                    ]}
+                  >
+                    {item.time}
                   </Text>
-                  <Text style={{ color: theme.text }}>₹{ride.price}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </ScrollView>
+                  <Ionicons
+                    name="person-outline"
+                    size={14}
+                    color={theme.icoColor}
+                  />
+                  <Text style={[styles.rideTimeText, { color: theme.text }]}>
+                    {item.seats}
+                  </Text>
+                </View>
+                <Image source={item.img} style={styles.carIcon} />
+                <Text style={[styles.rideName, { color: theme.text }]}>
+                  {item.name}
+                </Text>
+                <Text style={{ color: theme.text }}>₹{item.price}</Text>
+              </TouchableOpacity>
+            )}
+            contentContainerStyle={styles.vehicleRow}
+          />
 
           <TouchableOpacity
             style={[styles.ExtrasButton, { backgroundColor: theme.background }]}
@@ -349,6 +563,8 @@ export default function RideOptionsScreen({ navigation, route }) {
                   ride: selectedVehicle,
                   from: fromLocation,
                   to: toLocation,
+                  fromLocationDetails: fromLocationDetails,
+                  toLocationDetails: toLocationDetails,
                 });
               } else {
                 alert("Please fill in locations and select a ride");
@@ -357,22 +573,39 @@ export default function RideOptionsScreen({ navigation, route }) {
           >
             <Text style={styles.bookText}>BOOK NOW</Text>
           </TouchableOpacity>
-        </BottomSheetView>
+        </BottomSheetScrollView>
       </BottomSheet>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  mapContainer: { flex: 1 },
+  mapContainer: {
+    flex: 1,
+    height: "100%",
+  },
 
   sheetContent: { flex: 1, padding: 15 },
 
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 15,
+  },
+  backButton: {
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: "rgba(0,0,0,0.1)",
+  },
   title: {
     fontSize: 18,
     fontWeight: "bold",
-    marginBottom: 15,
     textAlign: "center",
+    flex: 1,
+  },
+  placeholder: {
+    width: 40,
   },
   vehicleRow: {
     flexDirection: "row",
@@ -462,5 +695,81 @@ const styles = StyleSheet.create({
   },
   ExtrasText: {
     fontSize: 16,
+  },
+  markerContainer: {
+    backgroundColor: "white",
+    borderRadius: 20,
+    padding: 5,
+    elevation: 3,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  routeInfoCard: {
+    borderRadius: 12,
+    padding: 15,
+    marginBottom: 15,
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+  },
+  routeInfoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  routeInfoText: {
+    fontSize: 14,
+    fontWeight: "500",
+    marginLeft: 10,
+  },
+  routeStepsCard: {
+    borderRadius: 12,
+    padding: 15,
+    marginBottom: 15,
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+  },
+  routeStepsTitle: {
+    fontSize: 16,
+    fontWeight: "bold",
+    marginBottom: 10,
+  },
+  routeStepItem: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    marginBottom: 12,
+  },
+  stepNumber: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 12,
+  },
+  stepNumberText: {
+    color: "#000",
+    fontSize: 12,
+    fontWeight: "bold",
+  },
+  stepContent: {
+    flex: 1,
+  },
+  stepInstruction: {
+    fontSize: 14,
+    fontWeight: "500",
+    lineHeight: 20,
+  },
+  stepDistance: {
+    fontSize: 12,
+    marginTop: 2,
+    opacity: 0.7,
   },
 });

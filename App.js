@@ -14,6 +14,7 @@ import { createDrawerNavigator } from "@react-navigation/drawer";
 import HomeScreen from "./screens/HomeScreen";
 import RideOptionsScreen from "./screens/RideOptionsScreen";
 import ConfirmScreen from "./screens/ConfirmScreen";
+import MyRidesScreen from "./screens/MyRidesScreen";
 import DriverProfileScreen from "./screens/DriverProfileScreen";
 import LoginScreen from "./screens/LoginScreen";
 import SignUpScreen from "./screens/SignUpScreen";
@@ -45,6 +46,7 @@ function MainStack() {
       <Stack.Screen name="Home" component={HomeScreen} />
       <Stack.Screen name="RideOptions" component={RideOptionsScreen} />
       <Stack.Screen name="Confirm" component={ConfirmScreen} />
+      <Stack.Screen name="MyRides" component={MyRidesScreen} />
       <Stack.Screen name="DriverProfile" component={DriverProfileScreen} />
     </Stack.Navigator>
   );
