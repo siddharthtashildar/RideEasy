@@ -6,22 +6,31 @@ import {
   TouchableOpacity,
   TextInput,
   ScrollView,
+  FlatList,
 } from "react-native";
 import { ThemeContext } from "../context/ThemeContext";
+import { useAuth } from "../context/AuthContext";
 import { Ionicons } from "@expo/vector-icons";
 import LocationSearchInput from "../components/LocationSearchInput";
 
 export default function HomeScreen({ navigation }) {
   const { theme } = useContext(ThemeContext);
+  const { user } = useAuth();
   const [fromLocation, setFromLocation] = useState("");
   const [toLocation, setToLocation] = useState("");
   const [fromLocationDetails, setFromLocationDetails] = useState(null);
   const [toLocationDetails, setToLocationDetails] = useState(null);
 
-  return (
-    <ScrollView
-      style={[styles.container, { backgroundColor: theme.background }]}
-    >
+  const savedLocations = [
+    { id: "add", name: "+ Add", isPrimary: true },
+    { id: "home", name: "Home", isPrimary: false },
+    { id: "office", name: "Office", isPrimary: false },
+    { id: "gym", name: "Gym", isPrimary: false },
+    { id: "coffee", name: "Coffee", isPrimary: false },
+  ];
+
+  const renderHeader = () => (
+    <>
       <View style={styles.header}>
         <Ionicons
           name="menu"
@@ -39,49 +48,66 @@ export default function HomeScreen({ navigation }) {
           { color: theme.text, fontFamily: "Poppins-Bold" },
         ]}
       >
-        Hi Niggachu!
+        Hi {user?.user_metadata?.full_name?.split(" ")[0] || "User"}!
       </Text>
       <Text style={[styles.nameTitleSmol, { color: theme.text }]}>
         Where would you like to go?
       </Text>
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-        <View style={styles.savedRow}>
+      <FlatList
+        data={savedLocations}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => (
           <TouchableOpacity
-            style={[styles.savedButton, { backgroundColor: theme.primary }]}
+            style={[
+              styles.savedButton,
+              {
+                backgroundColor: item.isPrimary ? theme.primary : theme.card,
+              },
+            ]}
           >
-            <Text style={[styles.savedTitle, { color: "#000" }]}>+ Add</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.savedButton, { backgroundColor: theme.card }]}
-          >
-            <Text style={[styles.savedTitle, { color: theme.text }]}>Home</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.savedButton, { backgroundColor: theme.card }]}
-          >
-            <Text style={[styles.savedTitle, { color: theme.text }]}>
-              Office
+            <Text
+              style={[
+                styles.savedTitle,
+                { color: item.isPrimary ? "#000" : theme.text },
+              ]}
+            >
+              {item.name}
             </Text>
           </TouchableOpacity>
+        )}
+        contentContainerStyle={styles.savedRow}
+        scrollEnabled={true}
+        nestedScrollEnabled={true}
+      />
+    </>
+  );
 
-          <TouchableOpacity
-            style={[styles.savedButton, { backgroundColor: theme.card }]}
-          >
-            <Text style={[styles.savedTitle, { color: theme.text }]}>Gym</Text>
-          </TouchableOpacity>
+  const renderFooter = () => (
+    <>
+      <Text style={[styles.sectionTitle, { color: theme.text }]}>Services</Text>
 
-          <TouchableOpacity
-            style={[styles.savedButton, { backgroundColor: theme.card }]}
-          >
-            <Text style={[styles.savedTitle, { color: theme.text }]}>
-              Coffee
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
+      <Text style={[styles.sectionTitle, { color: theme.text }]}>
+        Recent Visits
+      </Text>
+      <Text style={[styles.recentText, { color: theme.text }]}>
+        Utah University, Charlie Kirk Last Spot
+      </Text>
+      <Text style={[styles.recentText, { color: theme.text }]}>
+        Geeta residency, Urvasad
+      </Text>
+    </>
+  );
+
+  return (
+    <ScrollView
+      style={[styles.container, { backgroundColor: theme.background }]}
+      keyboardShouldPersistTaps="always"
+      nestedScrollEnabled={true}
+    >
+      {renderHeader()}
 
       <View style={[styles.locationCard, { backgroundColor: theme.card }]}>
         {/* Pickup */}
@@ -128,6 +154,7 @@ export default function HomeScreen({ navigation }) {
           />
         </View>
       </View>
+
       <TouchableOpacity
         style={[styles.button, { backgroundColor: theme.primary }]}
         onPress={() =>
@@ -142,23 +169,14 @@ export default function HomeScreen({ navigation }) {
         <Text style={styles.buttonText}>FIND YOUR RIDE!</Text>
       </TouchableOpacity>
 
-      <Text style={[styles.sectionTitle, { color: theme.text }]}>Services</Text>
-
-      <Text style={[styles.sectionTitle, { color: theme.text }]}>
-        Recent Visits
-      </Text>
-      <Text style={[styles.recentText, { color: theme.text }]}>
-        Utah University, Charlie Kirk Last Spot
-      </Text>
-      <Text style={[styles.recentText, { color: theme.text }]}>
-        Geeta residency, Urvasad
-      </Text>
+      {renderFooter()}
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 20 },
+  contentContainer: { padding: 20 },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",

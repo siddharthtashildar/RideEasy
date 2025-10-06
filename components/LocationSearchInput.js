@@ -24,7 +24,10 @@ export default function LocationSearchInput({
   const [isLoading, setIsLoading] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [currentLocation, setCurrentLocation] = useState(null);
+  const [isSelecting, setIsSelecting] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
   const searchTimeoutRef = useRef(null);
+  const textInputRef = useRef(null);
 
   useEffect(() => {
     if (showCurrentLocation) {
@@ -67,14 +70,44 @@ export default function LocationSearchInput({
   };
 
   const handleLocationSelect = async (suggestion) => {
-    setShowSuggestions(false);
-    onChangeText(suggestion.description);
+    console.log("Selecting location:", suggestion.description);
+    console.log("Full suggestion object:", suggestion);
 
-    const placeDetails = await GoogleMapsService.getPlaceDetails(
-      suggestion.placeId
-    );
-    if (placeDetails && onLocationSelect) {
-      onLocationSelect(placeDetails);
+    setIsSelecting(true);
+
+    const selectedText = suggestion.description || suggestion.mainText || "";
+    console.log("Setting text to:", selectedText);
+
+    // Force update the text immediately
+    onChangeText(selectedText);
+
+    // Also try to update the text after a short delay (this might help with React Native's text input issues)
+    setTimeout(() => {
+      console.log("Force updating text after timeout");
+      onChangeText(selectedText);
+      // Also try to set the text directly using the ref
+      if (textInputRef.current) {
+        textInputRef.current.setNativeProps({ text: selectedText });
+      }
+    }, 100);
+
+    // Close suggestions immediately
+    setShowSuggestions(false);
+    setSuggestions([]);
+
+    try {
+      const placeDetails = await GoogleMapsService.getPlaceDetails(
+        suggestion.placeId
+      );
+      console.log("Place details:", placeDetails);
+      if (placeDetails && onLocationSelect) {
+        onLocationSelect(placeDetails);
+      }
+    } catch (error) {
+      console.error("Error getting place details:", error);
+    } finally {
+      // Reset selecting state after a longer delay
+      setTimeout(() => setIsSelecting(false), 200);
     }
   };
 
@@ -95,13 +128,28 @@ export default function LocationSearchInput({
     }
   };
 
+  const handleClearText = () => {
+    onChangeText("");
+    setSuggestions([]);
+    setShowSuggestions(false);
+  };
+
   const renderSuggestion = ({ item }) => (
     <TouchableOpacity
       style={[
         styles.suggestionItem,
         { borderBottomColor: theme.border || "#333" },
       ]}
-      onPress={() => handleLocationSelect(item)}
+      onPressIn={() => {
+        handleLocationSelect(item);
+      }}
+      onPress={() => {
+        handleLocationSelect(item);
+      }}
+      activeOpacity={0.7}
+      hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
+      delayPressIn={0}
+      delayPressOut={0}
     >
       <Ionicons
         name="location-outline"
@@ -130,47 +178,71 @@ export default function LocationSearchInput({
   );
 
   return (
-    <View style={styles.container}>
-      {label ? (
-        <Text style={[styles.label, { color: theme.text }]}>{label}</Text>
-      ) : null}
+    <>
+      <View style={styles.container}>
+        {label ? (
+          <Text style={[styles.label, { color: theme.text }]}>{label}</Text>
+        ) : null}
 
-      <View style={styles.inputContainer}>
-        <TextInput
-          style={[styles.input, { color: theme.text }]}
-          placeholder={placeholder}
-          placeholderTextColor="#999"
-          value={value}
-          onChangeText={handleTextChange}
-          onFocus={() => {
-            if (suggestions.length > 0) {
-              setShowSuggestions(true);
-            }
-          }}
-          onBlur={() => {
-            setTimeout(() => setShowSuggestions(false), 200);
-          }}
-        />
-
-        {isLoading && (
-          <ActivityIndicator
-            size="small"
-            color={theme.primary || "#007AFF"}
-            style={styles.loadingIndicator}
+        <View style={styles.inputContainer}>
+          <TextInput
+            ref={textInputRef}
+            style={[styles.input, { color: theme.text }]}
+            placeholder={placeholder}
+            placeholderTextColor="#999"
+            value={value}
+            onChangeText={handleTextChange}
+            onFocus={() => {
+              setIsFocused(true);
+              if (suggestions.length > 0) {
+                setShowSuggestions(true);
+              }
+            }}
+            onBlur={() => {
+              setIsFocused(false);
+              // Only hide suggestions if not currently selecting
+              if (!isSelecting) {
+                setTimeout(() => setShowSuggestions(false), 500);
+              }
+            }}
           />
-        )}
 
-        {showCurrentLocation && currentLocation && (
-          <TouchableOpacity
-            style={[
-              styles.currentLocationButton,
-              { backgroundColor: theme.primary },
-            ]}
-            onPress={handleCurrentLocationSelect}
-          >
-            <Ionicons name="locate" size={16} color="#000" />
-          </TouchableOpacity>
-        )}
+          {isLoading && (
+            <ActivityIndicator
+              size="small"
+              color={theme.primary || "#007AFF"}
+              style={styles.loadingIndicator}
+            />
+          )}
+
+          {/* Clear button - show when focused and has text */}
+          {isFocused && value.length > 0 && (
+            <TouchableOpacity
+              style={[
+                styles.clearButton,
+                {
+                  backgroundColor: theme.background || "#f0f0f0",
+                  right: showCurrentLocation && currentLocation ? 45 : 10,
+                },
+              ]}
+              onPress={handleClearText}
+            >
+              <Ionicons name="close" size={16} color={theme.text || "#666"} />
+            </TouchableOpacity>
+          )}
+
+          {showCurrentLocation && currentLocation && (
+            <TouchableOpacity
+              style={[
+                styles.currentLocationButton,
+                { backgroundColor: theme.primary },
+              ]}
+              onPress={handleCurrentLocationSelect}
+            >
+              <Ionicons name="locate" size={16} color="#000" />
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
 
       {showSuggestions && suggestions.length > 0 && (
@@ -182,19 +254,24 @@ export default function LocationSearchInput({
             renderItem={renderSuggestion}
             keyExtractor={(item) => item.placeId}
             style={styles.suggestionsList}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={true}
+            keyboardShouldPersistTaps="always"
+            removeClippedSubviews={false}
+            scrollEnabled={true}
+            nestedScrollEnabled={true}
+            bounces={true}
+            overScrollMode="auto"
           />
         </View>
       )}
-    </View>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     position: "relative",
-    zIndex: 1,
+    zIndex: 100,
   },
   label: {
     fontSize: 12,
@@ -228,6 +305,20 @@ const styles = StyleSheet.create({
     alignItems: "center",
     elevation: 2,
   },
+  clearButton: {
+    position: "absolute",
+    right: 10,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+  },
   suggestionsContainer: {
     position: "absolute",
     top: "100%",
@@ -235,12 +326,20 @@ const styles = StyleSheet.create({
     right: 0,
     maxHeight: 200,
     borderRadius: 8,
-    elevation: 5,
-    zIndex: 1000,
+    elevation: 30,
+    zIndex: 999999,
     marginTop: 4,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.5,
+    shadowRadius: 16,
+    borderWidth: 2,
+    borderColor: "rgba(0,0,0,0.2)",
+    overflow: "hidden",
   },
   suggestionsList: {
     maxHeight: 200,
+    flexGrow: 0,
   },
   suggestionItem: {
     flexDirection: "row",
