@@ -42,6 +42,7 @@ export const AuthProvider = ({ children }) => {
           data: {
             full_name: fullName,
           },
+          emailRedirectTo: "exp://10.216.126.173:8081", // Your IP address
         },
       });
       return { data, error };

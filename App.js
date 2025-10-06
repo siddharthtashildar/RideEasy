@@ -1,5 +1,5 @@
 import applyGlobalFont from "./fontConfig";
-applyGlobalFont("Poppins-Regular"); // or your desired font name
+applyGlobalFont("Poppins-Regular");
 
 import "react-native-gesture-handler";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -7,7 +7,7 @@ import "react-native-reanimated";
 
 import * as Font from "expo-font";
 import React, { useEffect, useState } from "react";
-import { View, Text } from "react-native"; // ✅ use View instead
+import { View, Text } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { createDrawerNavigator } from "@react-navigation/drawer";
@@ -17,6 +17,7 @@ import ConfirmScreen from "./screens/ConfirmScreen";
 import DriverProfileScreen from "./screens/DriverProfileScreen";
 import LoginScreen from "./screens/LoginScreen";
 import SignUpScreen from "./screens/SignUpScreen";
+import EmailConfirmationScreen from "./screens/EmailConfirmationScreen";
 import { ThemeProvider } from "./context/ThemeContext";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import SideMenu from "./screens/SideMenu";
@@ -30,6 +31,10 @@ function AuthStack() {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="Login" component={LoginScreen} />
       <Stack.Screen name="SignUp" component={SignUpScreen} />
+      <Stack.Screen
+        name="EmailConfirmation"
+        component={EmailConfirmationScreen}
+      />
     </Stack.Navigator>
   );
 }

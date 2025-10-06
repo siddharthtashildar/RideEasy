@@ -49,11 +49,8 @@ export default function SignUpScreen({ navigation }) {
     if (error) {
       Alert.alert("Sign Up Failed", error.message);
     } else {
-      Alert.alert(
-        "Success",
-        "Account created successfully! Please check your email to verify your account.",
-        [{ text: "OK", onPress: () => navigation.navigate("Login") }]
-      );
+      // Navigate to email confirmation screen
+      navigation.navigate("EmailConfirmation");
     }
   };
 
